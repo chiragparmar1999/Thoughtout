@@ -29,7 +29,7 @@ export default function Tickets() {
         prefill: { name: form.name, email: form.email, contact: form.phone },
         theme: { color: "#dc2626" },
         handler: async (payment) => {
-          const verify = await fetch("/api/payments/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "audience_ticket", recordId: data.id, ...payment }) });
+          const verify = await authedPost("/api/payments/verify", { type: "audience_ticket", recordId: data.id, ...payment });
           const result = await verify.json();
           setMsg(verify.ok ? "Payment successful! Your ticket is confirmed." : result.error || "Payment verification failed.");
         },

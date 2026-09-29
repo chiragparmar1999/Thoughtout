@@ -24,7 +24,7 @@ export default function EventsPage() {
         </div>
       </div>
 
-      <p className="mt-8 text-sm text-zinc-500">More events will be listed here as they're announced.</p>
+      <p className="mt-8 text-sm text-zinc-500">More events will be listed here as they&apos;re announced.</p>
     </section>
   );
 }

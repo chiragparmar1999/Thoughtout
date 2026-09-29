@@ -1,10 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase-client";
 
-type Row = Record<string, any>;
+type Row = {
+  id: string;
+  created_at: string;
+  amount_inr?: number;
+  price_inr?: number;
+  payment_status?: string;
+  status?: string;
+  tier?: string;
+  category?: string;
+  video_upsell?: boolean;
+  package_name?: string;
+};
 
 const STATUS_STYLE: Record<string, string> = {
   paid: "bg-green-500/20 text-green-400",
@@ -47,7 +57,7 @@ export default function Dashboard({ user: initialUser }: { user: User }) {
 
   const totalSpend = [...tickets, ...registrations, ...packages]
     .filter((r) => r.payment_status === "paid" || r.status === "paid")
-    .reduce((sum, r) => sum + (r.amount_inr || r.price_inr || 0), 0);
+    .reduce((sum, r) => sum + (r.amount_inr ?? r.price_inr ?? 0), 0);
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-16">
@@ -82,7 +92,7 @@ export default function Dashboard({ user: initialUser }: { user: User }) {
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-bold text-yellow-400">₹{t.amount_inr}</span>
-                <Badge status={t.payment_status} />
+                <Badge status={t.payment_status || "pending"} />
               </div>
             </div>
           ))}
@@ -102,7 +112,7 @@ export default function Dashboard({ user: initialUser }: { user: User }) {
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-bold text-yellow-400">₹{r.amount_inr}</span>
-                <Badge status={r.payment_status} />
+                <Badge status={r.payment_status || "pending"} />
               </div>
             </div>
           ))}
@@ -121,8 +131,8 @@ export default function Dashboard({ user: initialUser }: { user: User }) {
                 <p className="text-xs text-zinc-500">{new Date(p.created_at).toLocaleDateString("en-IN")}</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-bold text-yellow-400">₹{p.price_inr.toLocaleString("en-IN")}</span>
-                <Badge status={p.status} />
+                <span className="font-bold text-yellow-400">₹{(p.price_inr ?? 0).toLocaleString("en-IN")}</span>
+                <Badge status={p.status || "pending"} />
               </div>
             </div>
           ))}

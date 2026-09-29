@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase-client";
 
 export default function Navbar() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -18,7 +20,8 @@ export default function Navbar() {
   async function logout() {
     await supabaseBrowser().auth.signOut();
     setUser(null);
-    window.location.href = "/";
+    router.replace("/");
+    router.refresh();
   }
 
   const links = [

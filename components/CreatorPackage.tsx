@@ -21,7 +21,7 @@ export default function CreatorPackage() {
         prefill: { name: f.name, email: f.email, contact: f.phone },
         theme: { color: "#dc2626" },
         handler: async (payment) => {
-          const verify = await fetch("/api/payments/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "creator_package", recordId: data.id, ...payment }) });
+          const verify = await authedPost("/api/payments/verify", { type: "creator_package", recordId: data.id, ...payment });
           const result = await verify.json();
           setMsg(verify.ok ? "Payment successful! Your creator package is confirmed." : result.error || "Payment verification failed.");
         },

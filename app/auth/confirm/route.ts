@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabaseBrowser } from "@/lib/supabase-client";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -7,21 +8,38 @@ export async function GET(request: Request) {
   const type = url.searchParams.get("type") as "email" | "recovery" | "invite" | "email_change" | null;
 
   const redirectTo = new URL("/dashboard", url.origin);
+  const response = NextResponse.redirect(redirectTo);
 
   if (!tokenHash || !type) {
     redirectTo.pathname = "/login";
     redirectTo.searchParams.set("error", "Invalid confirmation link");
-    return NextResponse.redirect(redirectTo);
+    response.headers.set("Location", redirectTo.toString());
+    return response;
   }
 
-  // This route exists for projects using PKCE email confirmation links.
-  const supabase = supabaseBrowser();
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
   const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
 
   if (error) {
     redirectTo.pathname = "/login";
     redirectTo.searchParams.set("error", error.message);
+    response.headers.set("Location", redirectTo.toString());
   }
 
-  return NextResponse.redirect(redirectTo);
+  return response;
 }

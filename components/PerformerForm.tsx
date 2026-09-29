@@ -30,7 +30,7 @@ export default function PerformerForm() {
         prefill: { name: f.name, email: f.email, contact: f.contact_no },
         theme: { color: "#dc2626" },
         handler: async (payment) => {
-          const verify = await fetch("/api/payments/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "performer_registration", recordId: data.id, ...payment }) });
+          const verify = await authedPost("/api/payments/verify", { type: "performer_registration", recordId: data.id, ...payment });
           const result = await verify.json();
           setMsg(verify.ok ? "Payment successful! Performer registration is confirmed." : result.error || "Payment verification failed.");
         },
