@@ -91,7 +91,7 @@ app.get('/api/admin/gallery',adminRequired,async(req,res)=>{
   if(error) return res.status(500).json({error:error.message}); res.json(data||[]);
 });
 
-app.get('*',(req,res)=>{
+app.get('/{*splat}',(req,res)=>{
   if(req.path.startsWith('/api/')) return res.status(404).json({error:'Not found'});
   res.sendFile(path.join(__dirname,'public','index.html'));
 });
