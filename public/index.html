@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ThoughtOut — Open Mic Vadodara</title>
+<style>
+:root{--bg:#09090b;--card:#151518;--text:#f4f1e8;--muted:#aaa79f;--lime:#e8ff3d;--red:#ff2e4d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}a{color:inherit;text-decoration:none}
+nav{position:sticky;top:0;background:#09090bee;backdrop-filter:blur(12px);padding:18px 6%;display:flex;justify-content:space-between;z-index:5;border-bottom:1px solid #ffffff18}
+.logo{font-size:24px;font-weight:900;letter-spacing:2px}.btn{display:inline-block;padding:12px 18px;background:var(--lime);color:#080808;font-weight:800;border-radius:4px}
+.hero{min-height:72vh;display:grid;place-items:center;padding:70px 6%;background:radial-gradient(circle at 70% 30%,#e8ff3d14,transparent 35%)}
+.hero h1{font-size:clamp(58px,12vw,150px);line-height:.85;margin:0;max-width:1000px;text-transform:uppercase}.hero p{font-size:18px;color:var(--muted);max-width:650px;line-height:1.6}
+section{padding:60px 6%;max-width:1300px;margin:auto}h2{font-size:42px;margin:0 0 25px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}.card{background:var(--card);border:1px solid #ffffff14;padding:24px;border-radius:8px}.tag{color:var(--lime);font-size:12px;text-transform:uppercase;letter-spacing:2px}.muted{color:var(--muted)}footer{padding:50px 6%;border-top:1px solid #ffffff14;color:var(--muted)}
+</style></head><body>
+<nav><div class="logo">THOUGHTOUT</div><a class="btn" href="#events">BOOK / PERFORM</a></nav>
+<header class="hero"><div><div class="tag">LIVE VOICES • REAL STORIES • RAW TALENT</div><h1>YOUR VOICE<br>MATTERS.</h1><p>Open mic events in Vadodara for comedians, poets, musicians and creators. Speak your soul. Set your story free.</p><a class="btn" href="#events">SEE EVENTS</a></div></header>
+<section id="events"><h2>Upcoming Events</h2><div id="eventsGrid" class="grid"><div class="card">Loading events…</div></div></section>
+<section><h2>Social Gallery</h2><div id="galleryGrid" class="grid"><div class="card">Loading gallery…</div></div></section>
+<footer>ThoughtOut • Vadodara<br><span class="muted">Open mic, live events & creator experiences.</span></footer>
+<script>
+async function load(){
+ const eg=document.getElementById('eventsGrid'), gg=document.getElementById('galleryGrid');
+ try{const r=await fetch('/api/events');const a=await r.json();eg.innerHTML=a.length?a.map(e=>'<article class="card"><div class="tag">'+(e.month_label||'EVENT')+'</div><h3>'+esc(e.day_label||e.event_date||'Event')+'</h3><p class="muted">'+esc(e.venue||'Vadodara')+' • '+esc(e.event_time||'')+'</p><a class="btn" href="#contact" onclick="alert(\'Use the event booking flow from the connected site.\')">BOOK NOW</a></article>').join(''):'<div class="card">No upcoming events yet.</div>'}catch(e){eg.innerHTML='<div class="card">Events unavailable until Supabase is configured.</div>'}
+ try{const r=await fetch('/api/gallery');const a=await r.json();gg.innerHTML=a.length?a.map(x=>'<article class="card"><div class="tag">'+esc(x.platform||'media')+'</div><h3>'+esc(x.title||'ThoughtOut')+'</h3><a href="'+esc(x.media_url||'#')+'" target="_blank" rel="noopener">OPEN MEDIA →</a></article>').join(''):'<div class="card">Gallery is ready for your social posts.</div>'}catch(e){gg.innerHTML='<div class="card">Gallery unavailable until Supabase is configured.</div>'}
+}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}load();
+</script></body></html>

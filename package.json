@@ -1,34 +1,21 @@
 {
-  "name": "thoughtout",
-  "version": "0.1.0",
-  "private": true,
-  "packageManager": "pnpm@11.25.0",
-  "engines": {
-    "node": ">=22.13.0"
-  },
+  "name": "thoughtout-app",
+  "version": "2.0.0",
+  "description": "ThoughtOut Open Mic — full-stack site backed by Supabase (Postgres)",
+  "main": "server.js",
+  "engines": { "node": "20.x" },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint .",
-    "typecheck": "next typegen && tsc --noEmit"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check server.js && node --check supabaseClient.js && node --check razorpay.js && node --check api/index.js"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@supabase/ssr": "0.12.7",
-    "@supabase/supabase-js": "2.117.2",
-    "next": "16.3.7",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
-  },
-  "devDependencies": {
-    "@types/node": "22.19.15",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "autoprefixer": "10.4.27",
-    "eslint": "9.39.2",
-    "eslint-config-next": "16.3.7",
-    "postcss": "8.5.8",
-    "tailwindcss": "3.4.19",
-    "typescript": "5.9.3"
+    "@supabase/supabase-js": "^2.117.2",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1"
   }
 }
