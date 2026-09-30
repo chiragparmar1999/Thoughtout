@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "ThoughtOut Open Mic — full-stack site backed by Supabase (Postgres)",
   "main": "server.js",
-  "engines": { "node": "20.x" },
+  "engines": { "node": "24.x" },
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
