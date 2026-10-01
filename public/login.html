@@ -3,23 +3,25 @@
 <title>Thoughtout Login</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#09090b;color:#f4f4f5;font:15px Inter,system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:20px}
-.card{width:min(460px,100%);background:#111113;border:1px solid #27272a;border-radius:18px;padding:26px;box-shadow:0 20px 70px #0008}.brand{font-size:26px;font-weight:900;letter-spacing:1px}.brand span{color:#eab308}.muted{color:#a1a1aa}.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:22px 0 18px}.tab{padding:12px;border:1px solid #3f3f46;background:#18181b;color:#fff;border-radius:10px;cursor:pointer;font-weight:700}.tab.active{background:#422006;border-color:#eab308;color:#fef08a}label{display:block;margin:14px 0 7px;color:#d4d4d8;font-size:13px}input{width:100%;padding:13px;border-radius:10px;border:1px solid #3f3f46;background:#09090b;color:#fff;outline:none}input:focus{border-color:#eab308}.submit{width:100%;margin-top:20px;padding:13px;border:0;border-radius:10px;background:#eab308;color:#111;font-weight:900;cursor:pointer}.google{width:100%;margin-top:4px;padding:13px;border:1px solid #52525b;border-radius:10px;background:#fff;color:#111;font-weight:800;cursor:pointer}.or{display:flex;align-items:center;gap:10px;color:#71717a;margin:18px 0}.or:before,.or:after{content:"";height:1px;background:#27272a;flex:1}.msg{min-height:22px;margin-top:12px}.error{color:#fca5a5}.hint{font-size:12px;color:#71717a;line-height:1.5;margin-top:14px}.back{display:inline-block;margin-top:18px;color:#a1a1aa;text-decoration:none}
+.card{width:min(460px,100%);background:#111113;border:1px solid #27272a;border-radius:18px;padding:26px;box-shadow:0 20px 70px #0008}.brand{font-size:26px;font-weight:900;letter-spacing:1px}.brand span{color:#eab308}.muted{color:#a1a1aa}.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:22px 0 18px}.tab{padding:12px;border:1px solid #3f3f46;background:#18181b;color:#fff;border-radius:10px;cursor:pointer;font-weight:700}.tab.active{background:#422006;border-color:#eab308;color:#fef08a}label{display:block;margin:14px 0 7px;color:#d4d4d8;font-size:13px}input{width:100%;padding:13px;border-radius:10px;border:1px solid #3f3f46;background:#09090b;color:#fff;outline:none}input:focus{border-color:#eab308}.submit{width:100%;margin-top:20px;padding:13px;border:0;border-radius:10px;background:#eab308;color:#111;font-weight:900;cursor:pointer}.google{width:100%;margin-top:4px;padding:13px;border:1px solid #52525b;border-radius:10px;background:#fff;color:#111;font-weight:800;cursor:pointer}.or{display:flex;align-items:center;gap:10px;color:#71717a;margin:18px 0}.or:before,.or:after{content:"";height:1px;background:#27272a;flex:1}.msg{min-height:22px;margin-top:12px}.error{color:#fca5a5}.hint{font-size:12px;color:#71717a;line-height:1.5;margin-top:14px}.hidden{display:none}.success{color:#86efac}.back{display:inline-block;margin-top:18px;color:#a1a1aa;text-decoration:none}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body>
 <div class="card">
   <div class="brand">THOUGHTOUT <span>LOGIN</span></div>
-  <p id="subtitle" class="muted">Login or register instantly with Google.</p>
+  <p id="subtitle" class="muted">Login or register with Google or email OTP.</p>
   <div class="tabs"><button class="tab active" data-role="audience">🎟 Audience / Ticket</button><button class="tab" data-role="performer">🎤 Performer</button></div>
   <button class="google" id="google">Continue with Google</button>
-  <div class="or">or use existing booking</div>
-  <form id="form">
-    <label>Email</label><input id="email" type="email" required autocomplete="email" placeholder="Your registered email">
-    <label id="phoneLabel">Phone number</label><input id="phone" type="tel" required autocomplete="tel" placeholder="Your registered phone">
-    <label id="idLabel">Ticket ID</label><input id="recordId" required placeholder="e.g. ticket ID">
-    <button class="submit">Login with booking details</button>
+  <div class="or">or login with OTP</div>
+  <form id="otpForm">
+    <label>Email address</label><input id="email" type="email" required autocomplete="email" placeholder="Your registered email">
+    <button type="button" class="submit" id="sendOtp">Send OTP</button>
+    <div id="otpBox" class="hidden">
+      <label>6-digit OTP</label><input id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Enter OTP">
+      <button type="submit" class="submit">Verify OTP & Login</button>
+    </div>
   </form>
   <div id="msg" class="msg"></div>
-  <div class="hint">Google login creates your Thoughtout account automatically. If your Google email matches an existing ticket/registration, it will be linked to your account and visible in your dashboard and Admin.</div>
+  <div class="hint">OTP email par aayega. Ticket ID, Registration ID ya phone number yaad rakhne ki zarurat nahi. Agar email existing ticket/registration se match karta hai, woh automatically account se link ho jayega.</div>
   <a class="back" href="/">← Back to Thoughtout</a>
 </div>
 <script>
@@ -31,6 +33,7 @@ function setRole(next){role=next;document.querySelectorAll('.tab').forEach(b=>b.
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setRole(b.dataset.role));
 $('google').onclick=async()=>{localStorage.setItem('thoughtout_google_role',role);$('msg').className='msg';$('msg').textContent='Opening Google…';const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+'/login'}});if(error){$('msg').className='msg error';$('msg').textContent=error.message}};
 async function finishGoogle(){const {data,error}=await sb.auth.getSession();if(error||!data.session)return;const chosen=localStorage.getItem('thoughtout_google_role')||'audience';$('msg').textContent='Creating your Thoughtout account…';const r=await fetch('/api/auth/google-sync',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({access_token:data.session.access_token,role:chosen})});const j=await r.json();if(!r.ok)throw new Error(j.error||'Google login failed');localStorage.removeItem('thoughtout_google_role');location.href='/account'}
-$('form').onsubmit=async e=>{e.preventDefault();$('msg').className='msg';$('msg').textContent='Checking…';try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({role,email:$('email').value.trim(),phone:$('phone').value.trim(),record_id:$('recordId').value.trim()})});const j=await r.json();if(!r.ok)throw new Error(j.error||'Login failed');location.href='/account'}catch(err){$('msg').className='msg error';$('msg').textContent=err.message}};
+$('sendOtp').onclick=async()=>{const email=$('email').value.trim().toLowerCase();if(!email){$('msg').className='msg error';$('msg').textContent='Enter your email first.';return}$('sendOtp').disabled=true;$('msg').className='msg';$('msg').textContent='Sending OTP…';try{const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});if(error)throw error;$('otpBox').classList.remove('hidden');$('otp').focus();$('msg').className='msg success';$('msg').textContent='OTP sent to your email. Check inbox/spam.'}catch(e){$('msg').className='msg error';$('msg').textContent=e.message}finally{$('sendOtp').disabled=false}};
+$('otpForm').onsubmit=async e=>{e.preventDefault();const email=$('email').value.trim().toLowerCase(),token=$('otp').value.trim();if(!/^\d{6}$/.test(token)){$('msg').className='msg error';$('msg').textContent='Enter the 6-digit OTP.';return}$('msg').className='msg';$('msg').textContent='Verifying OTP…';try{const {data,error}=await sb.auth.verifyOtp({email,token,type:'email'});if(error||!data.session)throw error||new Error('OTP verification failed');const r=await fetch('/api/auth/otp-sync',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({access_token:data.session.access_token,role})});const j=await r.json();if(!r.ok)throw new Error(j.error||'OTP login failed');location.href='/account'}catch(err){$('msg').className='msg error';$('msg').textContent=err.message}};
 finishGoogle().catch(e=>{$('msg').className='msg error';$('msg').textContent=e.message});
 </script></body></html>
