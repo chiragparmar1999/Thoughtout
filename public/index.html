@@ -4,13 +4,14 @@
 <style>
 :root{--bg:#09090b;--card:#151518;--text:#f4f1e8;--muted:#aaa79f;--lime:#e8ff3d;--red:#ff2e4d}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}a{color:inherit;text-decoration:none}
-nav{position:sticky;top:0;background:#09090bee;backdrop-filter:blur(12px);padding:18px 6%;display:flex;justify-content:space-between;z-index:5;border-bottom:1px solid #ffffff18}
-.logo{font-size:24px;font-weight:900;letter-spacing:2px}.btn{display:inline-block;padding:12px 18px;background:var(--lime);color:#080808;font-weight:800;border-radius:4px}
+nav{position:sticky;top:0;background:#09090bee;backdrop-filter:blur(12px);padding:18px 6%;display:flex;justify-content:space-between;align-items:center;gap:12px;z-index:5;border-bottom:1px solid #ffffff18}
+.logo{font-size:24px;font-weight:900;letter-spacing:2px}.btn{display:inline-block;padding:12px 18px;background:var(--lime);color:#080808;font-weight:800;border-radius:4px}.btn.alt{background:#18181b;color:#fff;border:1px solid #3f3f46}
 .hero{min-height:72vh;display:grid;place-items:center;padding:70px 6%;background:radial-gradient(circle at 70% 30%,#e8ff3d14,transparent 35%)}
 .hero h1{font-size:clamp(58px,12vw,150px);line-height:.85;margin:0;max-width:1000px;text-transform:uppercase}.hero p{font-size:18px;color:var(--muted);max-width:650px;line-height:1.6}
 section{padding:60px 6%;max-width:1300px;margin:auto}h2{font-size:42px;margin:0 0 25px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}.card{background:var(--card);border:1px solid #ffffff14;padding:24px;border-radius:8px}.tag{color:var(--lime);font-size:12px;text-transform:uppercase;letter-spacing:2px}.muted{color:var(--muted)}footer{padding:50px 6%;border-top:1px solid #ffffff14;color:var(--muted)}
+@media(max-width:600px){nav{padding:14px 4%}.logo{font-size:20px}.navbtn{padding:9px 11px;font-size:12px}}
 </style></head><body>
-<nav><div class="logo">THOUGHTOUT</div><a class="btn" href="#events">BOOK / PERFORM</a></nav>
+<nav><div class="logo">THOUGHTOUT</div><div><a class="btn alt navbtn" href="/login">LOGIN</a> <a class="btn navbtn" href="#events">BOOK / PERFORM</a></div></nav>
 <header class="hero"><div><div class="tag">LIVE VOICES • REAL STORIES • RAW TALENT</div><h1>YOUR VOICE<br>MATTERS.</h1><p>Open mic events in Vadodara for comedians, poets, musicians and creators. Speak your soul. Set your story free.</p><a class="btn" href="#events">SEE EVENTS</a></div></header>
 <section id="events"><h2>Upcoming Events</h2><div id="eventsGrid" class="grid"><div class="card">Loading events…</div></div></section>
 <section><h2>Social Gallery</h2><div id="galleryGrid" class="grid"><div class="card">Loading gallery…</div></div></section>
