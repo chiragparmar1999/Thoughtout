@@ -2,6 +2,7 @@ require('dotenv').config();
 const express=require('express');
 const cors=require('cors');
 const path=require('path');
+const crypto=require('crypto');
 const supabase=require('./supabaseClient');
 const razorpay=require('./razorpay');
 const {TICKET_PRICES}=require('./pricing');
@@ -9,6 +10,8 @@ const {TICKET_PRICES}=require('./pricing');
 const app=express();
 const ADMIN_KEY=process.env.ADMIN_KEY||'';
 const db=Boolean(supabase);
+const ADMIN_COOKIE='thoughtout_admin';
+const ADMIN_MAX_AGE=8*60*60*1000;
 
 app.use(cors());
 app.use(express.json());
@@ -18,10 +21,30 @@ const dbRequired=(req,res,next)=>{
   if(!db) return res.status(503).json({error:'Database is not configured. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'});
   next();
 };
+
+function signAdminToken(exp){
+  const payload=String(exp);
+  const sig=crypto.createHmac('sha256',ADMIN_KEY).update(payload).digest('hex');
+  return `${payload}.${sig}`;
+}
+function verifyAdminToken(token){
+  if(!ADMIN_KEY||!token) return false;
+  const [exp,sig]=String(token).split('.');
+  if(!exp||!sig||Number(exp)<Date.now()) return false;
+  const expected=crypto.createHmac('sha256',ADMIN_KEY).update(exp).digest('hex');
+  return sig.length===expected.length && crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected));
+}
+function getCookie(req,name){
+  const header=req.headers.cookie||'';
+  const item=header.split(';').map(v=>v.trim()).find(v=>v.startsWith(name+'='));
+  return item ? decodeURIComponent(item.slice(name.length+1)) : '';
+}
 const adminRequired=(req,res,next)=>{
   if(!db) return res.status(503).json({error:'Database is not configured.'});
-  if(!ADMIN_KEY || req.headers['x-admin-key']!==ADMIN_KEY) return res.status(401).json({error:'Unauthorized'});
-  next();
+  const headerKey=req.headers['x-admin-key'];
+  const cookieToken=getCookie(req,ADMIN_COOKIE);
+  if((ADMIN_KEY && headerKey===ADMIN_KEY) || verifyAdminToken(cookieToken)) return next();
+  return res.status(401).json({error:'Unauthorized'});
 };
 
 app.get('/api/health',(req,res)=>res.json({
@@ -34,7 +57,14 @@ app.get('/api/health',(req,res)=>res.json({
 
 app.post('/api/admin/verify',(req,res)=>{
   if(!ADMIN_KEY) return res.status(503).json({valid:false,error:'ADMIN_KEY is not configured.'});
-  res.json({valid:req.body.key===ADMIN_KEY});
+  if(req.body.key!==ADMIN_KEY) return res.status(401).json({valid:false});
+  const expires=Date.now()+ADMIN_MAX_AGE;
+  res.setHeader('Set-Cookie',`${ADMIN_COOKIE}=${encodeURIComponent(signAdminToken(expires))}; HttpOnly; Path=/; Max-Age=${ADMIN_MAX_AGE/1000}; SameSite=Lax${process.env.NODE_ENV==='production'?'; Secure':''}`);
+  res.json({valid:true,expires_at:new Date(expires).toISOString()});
+});
+app.post('/api/admin/logout',(req,res)=>{
+  res.setHeader('Set-Cookie',`${ADMIN_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${process.env.NODE_ENV==='production'?'; Secure':''}`);
+  res.json({ok:true});
 });
 
 app.get('/api/events',dbRequired,async(req,res)=>{
@@ -84,6 +114,10 @@ app.get('/api/admin/tickets',adminRequired,async(req,res)=>{
 });
 app.get('/api/admin/registrations',adminRequired,async(req,res)=>{
   const {data,error}=await supabase.from('performer_registrations').select('*').order('created_at',{ascending:false});
+  if(error) return res.status(500).json({error:error.message}); res.json(data||[]);
+});
+app.get('/api/admin/packages',adminRequired,async(req,res)=>{
+  const {data,error}=await supabase.from('creator_packages').select('*').order('created_at',{ascending:false});
   if(error) return res.status(500).json({error:error.message}); res.json(data||[]);
 });
 app.get('/api/admin/gallery',adminRequired,async(req,res)=>{
