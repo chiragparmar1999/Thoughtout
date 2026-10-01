@@ -6,6 +6,7 @@ const crypto=require('crypto');
 const supabase=require('./supabaseClient');
 const razorpay=require('./razorpay');
 const {TICKET_PRICES}=require('./pricing');
+const {signal,listAgents,recentActivity}=require('./agents');
 
 const app=express();
 const ADMIN_KEY=process.env.ADMIN_KEY||'';
@@ -73,11 +74,13 @@ app.get('/api/health',(req,res)=>res.json({
   admin_configured:Boolean(ADMIN_KEY),time:new Date().toISOString()
 }));
 
+app.get('/api/admin/agents',adminRequired,(req,res)=>res.json({agents:listAgents(),activity:recentActivity()}));
 app.post('/api/admin/verify',(req,res)=>{
   if(!ADMIN_KEY) return res.status(503).json({valid:false,error:'ADMIN_KEY is not configured.'});
   if(req.body.key!==ADMIN_KEY) return res.status(401).json({valid:false,error:'Invalid admin key'});
   const expires=Date.now()+ADMIN_MAX_AGE;
   res.setHeader('Set-Cookie',cookie(ADMIN_COOKIE,signAdminToken(expires),ADMIN_MAX_AGE));
+  signal('admin','admin.login');
   res.json({valid:true,expires_at:new Date(expires).toISOString()});
 });
 app.post('/api/admin/logout',(req,res)=>{res.setHeader('Set-Cookie',cookie(ADMIN_COOKIE,'',0));res.json({ok:true});});
@@ -165,6 +168,8 @@ app.post('/api/tickets',dbRequired,async(req,res)=>{
   if(error)return res.status(400).json({error:error.message});
   let order=null;
   if(razorpay.isConfigured){try{order=await razorpay.createOrder({amountInr:amount_inr,receipt:'ticket_'+ticket.id,notes:{ticket_id:ticket.id,event_slug,tier}});await supabase.from('audience_tickets').update({razorpay_order_id:order.id}).eq('id',ticket.id);}catch(e){console.error(e);}}
+  signal('tickets','ticket.created',{ticket_id:ticket.id,event_slug,tier,amount_inr});
+  signal('payments',razorpay.isConfigured?'payment.order.created':'payment.pending',{ticket_id:ticket.id});
   res.status(201).json({ticket_id:ticket.id,amount_inr,payment_required:razorpay.isConfigured,razorpay_order:order,razorpay_key_id:razorpay.isConfigured?razorpay.KEY_ID:null});
 });
 
@@ -172,7 +177,9 @@ app.post('/api/registrations',dbRequired,async(req,res)=>{
   const {event_slug,name,contact_no,instagram_id,email,category}=req.body;
   if(!event_slug||!name||!contact_no||!instagram_id||!email||!category)return res.status(400).json({error:'event_slug, name, contact_no, instagram_id, email and category are required.'});
   const {data,error}=await supabase.from('performer_registrations').insert({event_slug,name,contact_no,instagram_id,email,category,payment_status:'paid',review_status:'pending'}).select().single();
-  if(error)return res.status(400).json({error:error.message});res.status(201).json(data);
+  if(error)return res.status(400).json({error:error.message});
+  signal('performers','registration.created',{registration_id:data.id,event_slug,category});
+  res.status(201).json(data);
 });
 
 app.get('/api/admin/events',adminRequired,async(req,res)=>{const {data,error}=await supabase.from('events').select('*').order('event_date',{ascending:true});if(error)return res.status(500).json({error:error.message});res.json(data||[]);});
