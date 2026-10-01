@@ -11,7 +11,9 @@ const app=express();
 const ADMIN_KEY=process.env.ADMIN_KEY||'';
 const db=Boolean(supabase);
 const ADMIN_COOKIE='thoughtout_admin';
+const USER_COOKIE='thoughtout_user';
 const ADMIN_MAX_AGE=8*60*60*1000;
+const USER_MAX_AGE=7*24*60*60*1000;
 
 app.use(cors());
 app.use(express.json());
@@ -22,22 +24,33 @@ const dbRequired=(req,res,next)=>{
   next();
 };
 
-function signAdminToken(exp){
-  const payload=String(exp);
-  const sig=crypto.createHmac('sha256',ADMIN_KEY).update(payload).digest('hex');
-  return `${payload}.${sig}`;
+function signToken(secret,payload){
+  const body=String(payload);
+  const sig=crypto.createHmac('sha256',secret).update(body).digest('hex');
+  return body+'.'+sig;
 }
-function verifyAdminToken(token){
-  if(!ADMIN_KEY||!token) return false;
-  const [exp,sig]=String(token).split('.');
-  if(!exp||!sig||Number(exp)<Date.now()) return false;
-  const expected=crypto.createHmac('sha256',ADMIN_KEY).update(exp).digest('hex');
-  return sig.length===expected.length && crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected));
+function verifyToken(secret,token){
+  if(!secret||!token) return null;
+  const [body,sig]=String(token).split('.');
+  if(!body||!sig) return null;
+  const expected=crypto.createHmac('sha256',secret).update(body).digest('hex');
+  if(sig.length!==expected.length) return null;
+  try{if(!crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected))) return null;}catch{return null;}
+  return body;
 }
 function getCookie(req,name){
   const header=req.headers.cookie||'';
   const item=header.split(';').map(v=>v.trim()).find(v=>v.startsWith(name+'='));
   return item ? decodeURIComponent(item.slice(name.length+1)) : '';
+}
+function cookie(name,value,maxAge,secure=process.env.NODE_ENV==='production'){
+  return `${name}=${encodeURIComponent(value)}; HttpOnly; Path=/; Max-Age=${Math.floor(maxAge/1000)}; SameSite=Lax${secure?'; Secure':''}`;
+}
+
+function signAdminToken(exp){return signToken(ADMIN_KEY,exp);}
+function verifyAdminToken(token){
+  const body=verifyToken(ADMIN_KEY,token);
+  return body&&Number(body)>=Date.now()?body:null;
 }
 const adminRequired=(req,res,next)=>{
   if(!db) return res.status(503).json({error:'Database is not configured.'});
@@ -45,6 +58,27 @@ const adminRequired=(req,res,next)=>{
   const cookieToken=getCookie(req,ADMIN_COOKIE);
   if((ADMIN_KEY && headerKey===ADMIN_KEY) || verifyAdminToken(cookieToken)) return next();
   return res.status(401).json({error:'Unauthorized'});
+};
+
+function userSecret(){
+  return ADMIN_KEY ? ADMIN_KEY : 'thoughtout-user-secret';
+}
+function signUserToken(role,id,exp){
+  return signToken(userSecret(),JSON.stringify({role,id,exp}));
+}
+function getUser(req){
+  const body=verifyToken(userSecret(),getCookie(req,USER_COOKIE));
+  if(!body) return null;
+  try{
+    const x=JSON.parse(body);
+    if(!x.role||!x.id||Number(x.exp)<Date.now()) return null;
+    return x;
+  }catch{return null;}
+}
+const userRequired=(req,res,next)=>{
+  const user=getUser(req);
+  if(!user) return res.status(401).json({error:'Login required'});
+  req.user=user; next();
 };
 
 app.get('/api/health',(req,res)=>res.json({
@@ -57,14 +91,54 @@ app.get('/api/health',(req,res)=>res.json({
 
 app.post('/api/admin/verify',(req,res)=>{
   if(!ADMIN_KEY) return res.status(503).json({valid:false,error:'ADMIN_KEY is not configured.'});
-  if(req.body.key!==ADMIN_KEY) return res.status(401).json({valid:false});
+  if(req.body.key!==ADMIN_KEY) return res.status(401).json({valid:false,error:'Invalid admin key'});
   const expires=Date.now()+ADMIN_MAX_AGE;
-  res.setHeader('Set-Cookie',`${ADMIN_COOKIE}=${encodeURIComponent(signAdminToken(expires))}; HttpOnly; Path=/; Max-Age=${ADMIN_MAX_AGE/1000}; SameSite=Lax${process.env.NODE_ENV==='production'?'; Secure':''}`);
+  res.setHeader('Set-Cookie',cookie(ADMIN_COOKIE,signAdminToken(expires),ADMIN_MAX_AGE));
   res.json({valid:true,expires_at:new Date(expires).toISOString()});
 });
 app.post('/api/admin/logout',(req,res)=>{
-  res.setHeader('Set-Cookie',`${ADMIN_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${process.env.NODE_ENV==='production'?'; Secure':''}`);
+  res.setHeader('Set-Cookie',cookie(ADMIN_COOKIE,'',0));
   res.json({ok:true});
+});
+
+app.post('/api/auth/login',dbRequired,async(req,res)=>{
+  const role=String(req.body.role||'').toLowerCase();
+  const email=String(req.body.email||'').trim().toLowerCase();
+  const phone=String(req.body.phone||'').trim();
+  const recordId=String(req.body.record_id||'').trim();
+  if(!['performer','audience'].includes(role)||!email||!phone||!recordId)
+    return res.status(400).json({error:'Role, email, phone and ID are required.'});
+
+  let data=null,error=null;
+  if(role==='performer'){
+    const q=await supabase.from('performer_registrations').select('*').eq('id',recordId).eq('email',email).eq('contact_no',phone).maybeSingle();
+    data=q.data; error=q.error;
+  }else{
+    const q=await supabase.from('audience_tickets').select('*').eq('id',recordId).eq('buyer_email',email).eq('buyer_phone',phone).maybeSingle();
+    data=q.data; error=q.error;
+  }
+  if(error) return res.status(500).json({error:error.message});
+  if(!data) return res.status(401).json({error:'Details do not match our registration records.'});
+
+  const exp=Date.now()+USER_MAX_AGE;
+  res.setHeader('Set-Cookie',cookie(USER_COOKIE,signUserToken(role,data.id,exp),USER_MAX_AGE));
+  res.json({ok:true,role,expires_at:new Date(exp).toISOString()});
+});
+
+app.post('/api/auth/logout',(req,res)=>{
+  res.setHeader('Set-Cookie',cookie(USER_COOKIE,'',0));
+  res.json({ok:true});
+});
+
+app.get('/api/auth/me',dbRequired,async(req,res)=>{
+  const user=getUser(req);
+  if(!user) return res.status(401).json({authenticated:false});
+  let q;
+  if(user.role==='performer') q=await supabase.from('performer_registrations').select('*').eq('id',user.id).maybeSingle();
+  else q=await supabase.from('audience_tickets').select('*').eq('id',user.id).maybeSingle();
+  if(q.error) return res.status(500).json({error:q.error.message});
+  if(!q.data) return res.status(401).json({authenticated:false});
+  res.json({authenticated:true,role:user.role,record:q.data});
 });
 
 app.get('/api/events',dbRequired,async(req,res)=>{
@@ -126,6 +200,8 @@ app.get('/api/admin/gallery',adminRequired,async(req,res)=>{
 });
 
 app.get('/admin',(req,res)=>res.sendFile(path.join(__dirname,'public','admin.html')));
+app.get('/login',(req,res)=>res.sendFile(path.join(__dirname,'public','login.html')));
+app.get('/account',(req,res)=>res.sendFile(path.join(__dirname,'public','account.html')));
 
 app.get('/{*splat}',(req,res)=>{
   if(req.path.startsWith('/api/')) return res.status(404).json({error:'Not found'});
