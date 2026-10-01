@@ -100,20 +100,18 @@ app.post('/api/auth/login',dbRequired,async(req,res)=>{
   res.json({ok:true,role,expires_at:new Date(exp).toISOString()});
 });
 
-app.post('/api/auth/google-sync',dbRequired,async(req,res)=>{
+async function syncAuthUser(req,res,provider){
   const accessToken=String(req.body.access_token||'');
   const role=String(req.body.role||'').toLowerCase();
   if(!accessToken||!['performer','audience'].includes(role))
-    return res.status(400).json({error:'Google session and account type are required.'});
+    return res.status(400).json({error:provider+' session and account type are required.'});
   const {data:userData,error:userError}=await supabase.auth.getUser(accessToken);
-  if(userError||!userData.user) return res.status(401).json({error:'Google session could not be verified.'});
+  if(userError||!userData.user) return res.status(401).json({error:provider+' session could not be verified.'});
   const user=userData.user;
   const email=String(user.email||'').toLowerCase();
+  if(!email) return res.status(400).json({error:'Your account does not have an email address.'});
   const meta=user.user_metadata||{};
-  const profile={
-    id:user.id,role,full_name:meta.full_name||meta.name||email.split('@')[0],
-    email,avatar_url:meta.avatar_url||meta.picture||null,updated_at:new Date().toISOString()
-  };
+  const profile={id:user.id,role,full_name:meta.full_name||meta.name||email.split('@')[0],email,avatar_url:meta.avatar_url||meta.picture||null,updated_at:new Date().toISOString()};
   const {data:profileData,error:profileError}=await supabase.from('user_profiles').upsert(profile,{onConflict:'id'}).select().single();
   if(profileError) return res.status(500).json({error:profileError.message});
   let linkedId=null;
@@ -128,7 +126,9 @@ app.post('/api/auth/google-sync',dbRequired,async(req,res)=>{
   const sessionId=linkedId||user.id;
   res.setHeader('Set-Cookie',cookie(USER_COOKIE,signUserToken(role,sessionId,exp),USER_MAX_AGE));
   res.json({ok:true,role,linked:!!linkedId,profile:profileData,expires_at:new Date(exp).toISOString()});
-});
+}
+app.post('/api/auth/google-sync',dbRequired,async(req,res)=>syncAuthUser(req,res,'Google'));
+app.post('/api/auth/otp-sync',dbRequired,async(req,res)=>syncAuthUser(req,res,'OTP'));
 
 app.post('/api/auth/logout',(req,res)=>{res.setHeader('Set-Cookie',cookie(USER_COOKIE,'',0));res.json({ok:true});});
 
