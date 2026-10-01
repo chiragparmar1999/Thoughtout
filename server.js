@@ -173,10 +173,27 @@ app.post('/api/tickets',dbRequired,async(req,res)=>{
   res.status(201).json({ticket_id:ticket.id,amount_inr,payment_required:razorpay.isConfigured,razorpay_order:order,razorpay_key_id:razorpay.isConfigured?razorpay.KEY_ID:null});
 });
 
+app.post('/api/tickets/verify',dbRequired,async(req,res)=>{
+  const {ticket_id,razorpay_order_id,razorpay_payment_id,razorpay_signature}=req.body||{};
+  if(!ticket_id||!razorpay_order_id||!razorpay_payment_id||!razorpay_signature)
+    return res.status(400).json({error:'Payment verification details are required.'});
+  if(!razorpay.isConfigured) return res.status(503).json({error:'Razorpay is not configured.'});
+  const ticket=await supabase.from('audience_tickets').select('*').eq('id',ticket_id).maybeSingle();
+  if(ticket.error) return res.status(500).json({error:ticket.error.message});
+  if(!ticket.data) return res.status(404).json({error:'Ticket not found.'});
+  if(ticket.data.razorpay_order_id!==razorpay_order_id) return res.status(400).json({error:'Order does not match ticket.'});
+  if(!razorpay.verifySignature({order_id:razorpay_order_id,payment_id:razorpay_payment_id,signature:razorpay_signature}))
+    return res.status(400).json({error:'Payment signature verification failed.'});
+  const {data,error}=await supabase.from('audience_tickets').update({payment_status:'paid',razorpay_payment_id}).eq('id',ticket_id).select().single();
+  if(error) return res.status(500).json({error:error.message});
+  signal('payments','payment.verified',{ticket_id,razorpay_payment_id});
+  res.json({ok:true,ticket:data});
+});
+
 app.post('/api/registrations',dbRequired,async(req,res)=>{
   const {event_slug,name,contact_no,instagram_id,email,category}=req.body;
   if(!event_slug||!name||!contact_no||!instagram_id||!email||!category)return res.status(400).json({error:'event_slug, name, contact_no, instagram_id, email and category are required.'});
-  const {data,error}=await supabase.from('performer_registrations').insert({event_slug,name,contact_no,instagram_id,email,category,payment_status:'paid',review_status:'pending'}).select().single();
+  const {data,error}=await supabase.from('performer_registrations').insert({event_slug,name,contact_no,instagram_id,email,category,payment_status:'pending',review_status:'pending'}).select().single();
   if(error)return res.status(400).json({error:error.message});
   signal('performers','registration.created',{registration_id:data.id,event_slug,category});
   res.status(201).json(data);
