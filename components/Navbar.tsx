@@ -29,6 +29,7 @@ export default function Navbar() {
     ["Tickets", "/tickets"],
     ["Perform", "/perform"],
     ["Creator Store", "/creators"],
+    ["Sponsors", "/sponsors"],
   ] as const;
 
   return (
