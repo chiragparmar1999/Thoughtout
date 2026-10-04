@@ -33,3 +33,19 @@ export default function Home() {
     </>
   );
 }
+
+
+  <section className="mx-auto max-w-6xl px-4 pb-16">
+    <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/5 p-7 sm:p-9">
+      <p className="text-xs font-bold uppercase tracking-widest text-yellow-400">Brand Partnerships</p>
+      <div className="mt-2 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-extrabold">Partner with ThoughtOut</h2>
+          <p className="mt-2 text-zinc-400">Reach Vadodara's creative community through live events, social content and custom brand activations.</p>
+        </div>
+        <Link href="/sponsors" className="w-fit rounded-lg bg-yellow-400 px-5 py-3 font-bold text-black hover:bg-yellow-300">
+          Become a Partner →
+        </Link>
+      </div>
+    </div>
+  </section>
