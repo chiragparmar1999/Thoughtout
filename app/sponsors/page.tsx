@@ -32,7 +32,7 @@ export default function SponsorsPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <a
-              href="mailto:info@thoughtoutmic.com?subject=ThoughtOut%20Brand%20Partnership"
+              href="/contact"
               className="rounded-lg bg-red-600 px-6 py-3 font-bold shadow-lg shadow-red-600/30 hover:bg-red-500"
             >
               Discuss a Partnership
