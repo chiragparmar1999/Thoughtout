@@ -1,16 +1,5 @@
-# Thoughtout — Vercel Build
+# ThoughtOut Surat Preview
 
-Express/Vercel ThoughtOut event site with Supabase, Razorpay and social gallery.
+Preview branch for the Surat performer referral and ticketing workflow.
 
-## Environment
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-ADMIN_KEY=
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-
-## Commands
-npm ci
-npm start
-
-Vercel entrypoint: api/index.js. Public site: / and admin dashboard: /admin.html.
+See the app source and environment template. Keep all Supabase service-role and admin credentials server-side. The original shared admin header needs HttpOnly session hardening before public production use.
